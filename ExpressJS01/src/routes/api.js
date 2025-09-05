@@ -1,5 +1,6 @@
 const express = require('express');
 const { createUser, handleLogin, getUser, getAccount } = require('../controllers/userController');
+const { getAllSongs, createSong, getSongsWithCategories } = require('../controllers/song.controller');
 const auth = require('../middleware/auth');
 const delay = require('../middleware/delay');
 
@@ -13,7 +14,9 @@ routerAPI.get('/', (req, res) => {
 routerAPI.post('/register', createUser);
 routerAPI.post('/login', handleLogin);
 
-routerAPI.get('/user', auth, getUser); // Áp dụng auth cho route /user
-routerAPI.get('/account', delay, getAccount); // Giữ delay cho /account
-
+routerAPI.get('/user', auth, getUser); 
+routerAPI.get('/account', delay, getAccount); 
+routerAPI.get('/songs', getAllSongs);
+routerAPI.post('/songs', createSong);
+routerAPI.get('/songs/with-category', getSongsWithCategories);
 module.exports = routerAPI;
