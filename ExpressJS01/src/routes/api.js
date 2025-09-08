@@ -3,7 +3,7 @@ const { createUser, handleLogin, getUser, getAccount } = require('../controllers
 const { getAllSongs, createSong, getSongsWithCategories } = require('../controllers/song.controller');
 const auth = require('../middleware/auth');
 const delay = require('../middleware/delay');
-
+const searchRoutes = require('./search'); 
 const routerAPI = express.Router();
 
 // Loại bỏ routerAPI.all("/*", auth) và áp dụng auth cho các route cụ thể
@@ -19,4 +19,5 @@ routerAPI.get('/account', delay, getAccount);
 routerAPI.get('/songs', getAllSongs);
 routerAPI.post('/songs', createSong);
 routerAPI.get('/songs/with-category', getSongsWithCategories);
+routerAPI.use('/search', searchRoutes); 
 module.exports = routerAPI;
