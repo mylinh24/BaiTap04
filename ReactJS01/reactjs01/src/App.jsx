@@ -11,25 +11,37 @@ function App() {
   useEffect(() => {
     const fetchAccount = async () => {
       setAppLoading(true);
-      const res = await axios.get("/v1/api/user");
-      if (res && res.message) {
-        setAuth({
-          isAuthenticated: true,
-          user: {
-            email: res.email,
-            name: res.name
-          }
-        });
+      try {
+        const res = await axios.get("/v1/api/user");
+        if (res && res.message) {
+          setAuth({
+            isAuthenticated: true,
+            user: {
+              email: res.email,
+              name: res.name,
+            },
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching account:", error);
+      } finally {
+        setAppLoading(false);
       }
-      setAppLoading(false);
     };
 
     fetchAccount();
-  }, []);
+  }, [setAuth, setAppLoading]);
 
   return (
-    <div>
-      {appLoading === true ? (
+    <div
+      style={{
+        height: "100vh", // Đảm bảo container chiếm toàn bộ chiều cao
+        overflow: "hidden", // Ngăn thanh cuộn
+        display: "flex",
+        flexDirection: "column", // Sắp xếp Header và Outlet theo cột
+      }}
+    >
+      {appLoading ? (
         <div
           style={{
             position: "fixed",
@@ -43,7 +55,14 @@ function App() {
       ) : (
         <>
           <Header />
-          <Outlet />
+          <div
+            style={{
+              flex: 1, // Outlet chiếm phần còn lại của chiều cao
+              overflow: "hidden", // Ngăn thanh cuộn trong container này
+            }}
+          >
+            <Outlet />
+          </div>
         </>
       )}
     </div>

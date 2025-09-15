@@ -66,3 +66,24 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+/* src/index.css */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden; /* Ngăn thanh cuộn mặc định */
+}
+
+#root {
+  height: 100%;
+  overflow: hidden; /* Ngăn container root tạo thanh cuộn */
+}
+
+/* Đảm bảo Ant Design không gây ra thanh cuộn không mong muốn */
+.ant-row, .ant-col, .ant-card {
+  overflow: hidden;
+}
+
+.ant-card-cover img {
+  width: 100%; /* Ngăn hình ảnh tràn ra ngoài */
+}

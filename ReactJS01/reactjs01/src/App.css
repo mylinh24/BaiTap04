@@ -40,3 +40,15 @@
 .read-the-docs {
   color: #888;
 }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden; /* Ngăn thanh cuộn mặc định của html/body */
+}
+
+#root {
+  height: 100%;
+  overflow: hidden; /* Ngăn container root tạo thanh cuộn */
+}

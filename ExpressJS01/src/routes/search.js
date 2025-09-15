@@ -3,23 +3,60 @@ const router = express.Router();
 const esClient = require("../elasticsearch");
 
 router.get("/", async (req, res) => {
-  const { keyword, category, artist, page = 1, size = 10 } = req.query; // Giữ size mặc định, nhưng có thể bỏ nếu không cần
+  const { keyword, category, artist, page = 1, size = 10 } = req.query;
 
   try {
     const must = [];
 
+    // Sửa keyword: wildcard cho ≤2 ký tự, match cho từ dài hơn
     if (keyword) {
-      must.push({
-        match: {
-          title: {
-            query: keyword,
-            fuzziness: "AUTO",
-            operator: "or",
+      if (keyword.length <= 2) { // Sửa từ 1 thành 2
+        must.push({
+          wildcard: {
+            title: {
+              value: `*${keyword.toLowerCase()}*`,
+              case_insensitive: true,
+            },
           },
-        },
-      });
+        });
+      } else {
+        must.push({
+          match: {
+            title: {
+              query: keyword,
+              fuzziness: "AUTO",
+              operator: "or",
+            },
+          },
+        });
+      }
     }
 
+    // Sửa artist tương tự
+    if (artist) {
+      if (artist.length <= 2) { // Sửa từ 1 thành 2
+        must.push({
+          wildcard: {
+            artist: {
+              value: `*${artist.toLowerCase()}*`,
+              case_insensitive: true,
+            },
+          },
+        });
+      } else {
+        must.push({
+          match: {
+            artist: {
+              query: artist,
+              fuzziness: "AUTO",
+              operator: "or",
+            },
+          },
+        });
+      }
+    }
+
+    // Giữ nguyên category
     if (category) {
       must.push({
         match: {
@@ -28,22 +65,10 @@ router.get("/", async (req, res) => {
       });
     }
 
-    if (artist) {
-      must.push({
-        match: {
-          artist: {
-            query: artist,
-            fuzziness: "AUTO",
-            operator: "or",
-          },
-        },
-      });
-    }
-
     const query = must.length > 0 ? { bool: { must } } : { match_all: {} };
 
-    const from = (parseInt(page, 10) - 1) * (size || 10); // Sử dụng size từ query, mặc định 10
-    const searchSize = size ? Math.min(parseInt(size, 10), 10000) : 10; // Giới hạn tối đa 10,000
+    const from = (parseInt(page, 10) - 1) * (size || 10);
+    const searchSize = size ? Math.min(parseInt(size, 10), 10000) : 10;
 
     console.log("Elasticsearch Query:", { index: "songs", from, size: searchSize, query });
     const result = await esClient.search({
@@ -51,12 +76,16 @@ router.get("/", async (req, res) => {
       from: from,
       size: searchSize,
       query: query,
-      sort: [{ id: { order: "asc" } }], // Sắp xếp theo id tăng dần
+      sort: [{ id: { order: "asc" } }],
     });
     const hits = result.hits.hits.map((h) => h._source);
     const total = result.hits.total.value;
 
-    console.log("Elasticsearch Result - Page", page, ":", { total, hitsLength: hits.length });
+    console.log("Elasticsearch Result - Page", page, ":", { 
+      total, 
+      hitsLength: hits.length, 
+      hits: hits.slice(0, 5) // Log 5 kết quả đầu để debug
+    });
 
     if (hits.length === 0) {
       return res.json({ message: "Không tìm thấy kết quả nào" });
@@ -65,7 +94,7 @@ router.get("/", async (req, res) => {
     res.json({
       total: total,
       page: parseInt(page, 10),
-      size: searchSize, // Trả về size thực tế
+      size: searchSize,
       data: hits,
     });
   } catch (err) {
