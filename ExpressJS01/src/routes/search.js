@@ -8,9 +8,8 @@ router.get("/", async (req, res) => {
   try {
     const must = [];
 
-    // Sửa keyword: wildcard cho ≤2 ký tự, match cho từ dài hơn
     if (keyword) {
-      if (keyword.length <= 2) { // Sửa từ 1 thành 2
+      if (keyword.length <= 2) { 
         must.push({
           wildcard: {
             title: {
@@ -32,9 +31,9 @@ router.get("/", async (req, res) => {
       }
     }
 
-    // Sửa artist tương tự
+  
     if (artist) {
-      if (artist.length <= 2) { // Sửa từ 1 thành 2
+      if (artist.length <= 2) { 
         must.push({
           wildcard: {
             artist: {

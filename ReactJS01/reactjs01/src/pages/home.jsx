@@ -1,12 +1,15 @@
-import { useEffect, useState, useCallback, useRef } from "react"; // Thêm useRef
-import { Card, Row, Col, Typography, Input, Select, Button, message } from "antd";
-import { CrownOutlined, SearchOutlined } from "@ant-design/icons";
+import { useEffect, useState, useCallback, useRef, useContext } from "react"; // Thêm useRef, useContext
+import { Card, Row, Col, Typography, Input, Select, Button, message, Modal, List, Avatar, Form, Tooltip } from "antd";
+import { CrownOutlined, SearchOutlined, HeartOutlined, HeartFilled, CommentOutlined, ShareAltOutlined, PlayCircleOutlined } from "@ant-design/icons";
 import InfiniteScroll from "react-infinite-scroll-component";
+import { AuthContext } from "../context/auth.context";
+import { addFavoriteApi, removeFavoriteApi, getFavoritesApi, addListenApi, getListenCountApi, getSimilarSongsApi, addCommentApi, getCommentsApi, deleteCommentApi, getSearchApi } from "../util/api";
 
 const { Title } = Typography;
 const { Option } = Select;
 
 const HomePage = () => {
+  const { auth } = useContext(AuthContext);
   const [songs, setSongs] = useState([]);
   const [filters, setFilters] = useState({
     keyword: "",
@@ -18,6 +21,11 @@ const HomePage = () => {
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [userFavorites, setUserFavorites] = useState(new Set());
+  const [listenCounts, setListenCounts] = useState({});
+  const [commentsModal, setCommentsModal] = useState({ visible: false, songId: null, comments: [] });
+  const [similarVisible, setSimilarVisible] = useState({});
+  const [commentForm] = Form.useForm();
 
   // Ref để giữ focus cho input
   const keywordInputRef = useRef(null);
@@ -35,21 +43,11 @@ const HomePage = () => {
   // Tách hàm fetch để tái sử dụng
   const fetchSongs = async (currentFilters) => {
     setLoading(true);
-    const query = new URLSearchParams({
-      ...currentFilters,
-      page: currentFilters.page,
-      size: currentFilters.size,
-    }).toString();
 
     console.log("🔍 Fetching with filters:", currentFilters);
-    console.log("📡 API URL:", `http://localhost:8888/v1/api/search?${query}`);
 
     try {
-      const response = await fetch(`http://localhost:8888/v1/api/search?${query}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
+      const data = await getSearchApi(currentFilters);
 
       console.log("📊 API Response:", data);
 
@@ -88,18 +86,22 @@ const HomePage = () => {
   };
 
   // Debounced fetch songs
-  const debouncedFetchSongs = useCallback(debounce(fetchSongs, 300), [songs.length]);
+  const debouncedFetchSongs = useCallback(debounce(fetchSongs, 300), []);
 
   // Handle filter changes
   const handleFilterChange = useCallback((key, value) => {
-    setFilters((prev) => ({
-      ...prev,
-      [key]: value,
-      page: 1,
-    }));
-    setSongs([]);
-    setHasMore(true);
-  }, []);
+    setFilters((prev) => {
+      const newFilters = {
+        ...prev,
+        [key]: value,
+        page: 1,
+      };
+      setSongs([]);
+      setHasMore(true);
+      debouncedFetchSongs(newFilters);
+      return newFilters;
+    });
+  }, [debouncedFetchSongs]);
 
   // Handle manual search (Enter hoặc nút Lọc)
   const handleSearch = useCallback(() => {
@@ -138,6 +140,109 @@ const HomePage = () => {
   useEffect(() => {
     fetchSongs(filters); // Chỉ gọi 1 lần khi component mount
   }, []); // Không phụ thuộc filters
+
+  // Load user favorites
+  useEffect(() => {
+    if (auth.isAuthenticated) {
+      getFavoritesApi().then(res => {
+        const favIds = new Set(res.map(f => f.id));
+        setUserFavorites(favIds);
+      }).catch(() => {});
+    } else {
+      setUserFavorites(new Set());
+    }
+  }, [auth.isAuthenticated]);
+
+  // Update listen counts from songs
+  useEffect(() => {
+    const counts = {};
+    songs.forEach(song => {
+      counts[song.id] = song.listener_count || 0;
+    });
+    setListenCounts(counts);
+  }, [songs]);
+
+  // Handlers
+  const handleListen = async (songId) => {
+    if (!auth.isAuthenticated) return;
+    try {
+      await addListenApi(songId);
+      setListenCounts(prev => ({ ...prev, [songId]: (prev[songId] || 0) + 1 }));
+    } catch (error) {
+      console.error("Error adding listen:", error);
+    }
+  };
+
+  const handleFavorite = async (songId) => {
+    if (!auth.isAuthenticated) {
+      message.warning("Vui lòng đăng nhập để thêm yêu thích");
+      return;
+    }
+    try {
+      if (userFavorites.has(songId)) {
+        await removeFavoriteApi(songId);
+        setUserFavorites(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(songId);
+          return newSet;
+        });
+        message.success("Đã xóa khỏi yêu thích");
+      } else {
+        await addFavoriteApi(songId);
+        setUserFavorites(prev => new Set(prev).add(songId));
+        message.success("Đã thêm vào yêu thích");
+      }
+    } catch (error) {
+      message.error("Lỗi cập nhật yêu thích");
+    }
+  };
+
+  const showComments = async (songId) => {
+    try {
+      const res = await getCommentsApi(songId);
+      setCommentsModal({ visible: true, songId, comments: res });
+    } catch (error) {
+      message.error("Lỗi tải bình luận");
+    }
+  };
+
+  const handleCommentSubmit = async (values) => {
+    try {
+      await addCommentApi(commentsModal.songId, values.comment);
+      const res = await getCommentsApi(commentsModal.songId);
+      setCommentsModal(prev => ({ ...prev, comments: res }));
+      commentForm.resetFields();
+      message.success("Đã thêm bình luận");
+    } catch (error) {
+      message.error("Lỗi thêm bình luận");
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    try {
+      await deleteCommentApi(commentId);
+      setCommentsModal(prev => ({
+        ...prev,
+        comments: prev.comments.filter(c => c.id !== commentId)
+      }));
+      message.success("Đã xóa bình luận");
+    } catch (error) {
+      message.error("Lỗi xóa bình luận");
+    }
+  };
+
+  const toggleSimilar = async (songId) => {
+    if (similarVisible[songId]) {
+      setSimilarVisible(prev => ({ ...prev, [songId]: false }));
+    } else {
+      try {
+        const res = await getSimilarSongsApi(songId);
+        setSimilarVisible(prev => ({ ...prev, [songId]: res }));
+      } catch (error) {
+        message.error("Lỗi tải bài hát tương tự");
+      }
+    }
+  };
 
   return (
     <div
@@ -227,16 +332,45 @@ const HomePage = () => {
                           }}
                         />
                       }
+                      actions={[
+                        auth.isAuthenticated ? (
+                          <Tooltip title={userFavorites.has(song.id) ? "Xóa yêu thích" : "Thêm yêu thích"}>
+                            {userFavorites.has(song.id) ? <HeartFilled style={{ color: 'red' }} onClick={() => handleFavorite(song.id)} /> : <HeartOutlined onClick={() => handleFavorite(song.id)} />}
+                          </Tooltip>
+                        ) : null,
+                        <Tooltip title="Bình luận">
+                          <CommentOutlined onClick={() => showComments(song.id)} />
+                        </Tooltip>,
+                        <Tooltip title="Bài hát tương tự">
+                          <ShareAltOutlined onClick={() => toggleSimilar(song.id)} />
+                        </Tooltip>,
+                      ]}
                     >
                       <Card.Meta title={song.title} description={song.artist} />
+                      <p>Lượt nghe: {listenCounts[song.id] || 0}</p>
                       <audio
                         controls
                         style={{ marginTop: 10, width: "100%" }}
                         preload="none"
+                        onPlay={() => handleListen(song.id)}
                       >
                         <source src={song.audio_url} type="audio/mp3" />
                       </audio>
                     </Card>
+                    {similarVisible[song.id] && (
+                      <div style={{ marginTop: 10 }}>
+                        <Title level={5}>Bài hát tương tự</Title>
+                        <Row gutter={[8, 8]}>
+                          {similarVisible[song.id].map(s => (
+                            <Col span={24} key={s.id}>
+                              <Card size="small">
+                                <Card.Meta title={s.title} description={s.artist} />
+                              </Card>
+                            </Col>
+                          ))}
+                        </Row>
+                      </div>
+                    )}
                   </Col>
                 ))}
               </Row>
@@ -246,6 +380,37 @@ const HomePage = () => {
           <p>{loading ? "Đang tải..." : "Không tìm thấy kết quả nào"}</p>
         )}
       </InfiniteScroll>
+      <Modal
+        title="Bình luận"
+        visible={commentsModal.visible}
+        onCancel={() => setCommentsModal({ visible: false, songId: null, comments: [] })}
+        footer={null}
+      >
+        <List
+          dataSource={commentsModal.comments || []}
+          renderItem={item => (
+            <List.Item
+              actions={auth.isAuthenticated && auth.user.email === (item.user_email || item.user_name) ? [<Button type="link" onClick={() => handleDeleteComment(item.id)}>Xóa</Button>] : []}
+            >
+              <List.Item.Meta
+                avatar={<Avatar>{(item.user_email || item.user_name || 'U')[0].toUpperCase()}</Avatar>}
+                title={item.user_email || item.user_name || 'Unknown User'}
+                description={item.comment}
+              />
+            </List.Item>
+          )}
+        />
+        {auth.isAuthenticated && (
+          <Form form={commentForm} onFinish={handleCommentSubmit}>
+            <Form.Item name="comment" rules={[{ required: true, message: 'Vui lòng nhập bình luận' }]}>
+              <Input.TextArea rows={3} placeholder="Thêm bình luận..." />
+            </Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit">Gửi</Button>
+            </Form.Item>
+          </Form>
+        )}
+      </Modal>
     </div>
   );
 };
