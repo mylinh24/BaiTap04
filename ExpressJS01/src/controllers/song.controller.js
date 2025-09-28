@@ -1,4 +1,4 @@
-const connection = require("../config/database");
+const pool = require("../config/database");
 const elasticClient = require('../config/elasticConfig');
 const favoritesModel = require('../models/favorites');
 const listenedHistoryModel = require('../models/listenedHistory');
@@ -30,10 +30,9 @@ async function indexSong(songData) {
 
 exports.getAllSongs = async (req, res) => {
   try {
-    const conn = await connection();
-    const [rows] = await conn.execute(
+    const [rows] = await pool.execute(
       `SELECT songs.*, categories.name AS category_name
-       FROM songs 
+       FROM songs
        LEFT JOIN categories ON songs.category_id = categories.id`
     );
 
@@ -56,8 +55,7 @@ exports.createSong = async (req, res) => {
       return res.status(400).json({ message: "Thiếu thông tin bài hát" });
     }
 
-    const conn = await connection();
-    const [result] = await conn.execute(
+    const [result] = await pool.execute(
       `INSERT INTO songs (title, artist, audio_url, image_url, category_id, listener_count)
        VALUES (?, ?, ?, ?, ?, 0)`,
       [title, artist, audio_url, image_url, category_id]
@@ -81,8 +79,7 @@ exports.createSong = async (req, res) => {
 };
 exports.getSongsWithCategories = async (req, res) => {
   try {
-    const conn = await connection();
-    const [rows] = await conn.execute(`
+    const [rows] = await pool.execute(`
       SELECT s.id, s.title, s.artist, s.audio_url, s.image_url, s.listener_count,
              c.name AS category_name
       FROM songs s

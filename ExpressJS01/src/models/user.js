@@ -1,12 +1,4 @@
-const mysql = require('mysql2/promise'); // Sử dụng promise-based API
-
-// Hàm kết nối MySQL (giả định đã cấu hình trong tệp khác)
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME
-});
+const pool = require("../config/database");
 
 // Định nghĩa bảng Users trong MySQL
 async function initializeTable() {
@@ -20,9 +12,7 @@ async function initializeTable() {
     );
   `;
   try {
-    const connection = await pool.getConnection();
-    await connection.query(createTableQuery);
-    connection.release();
+    await pool.execute(createTableQuery);
     console.log('Bảng users đã được tạo hoặc đã tồn tại.');
   } catch (error) {
     console.error('Lỗi khi tạo bảng:', error);
@@ -39,9 +29,7 @@ module.exports = {
     const { name, email, password, role } = userData;
     const query = 'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)';
     try {
-      const connection = await pool.getConnection();
-      const [result] = await connection.query(query, [name, email, password, role]);
-      connection.release();
+      const [result] = await pool.execute(query, [name, email, password, role]);
       return result.insertId; // Trả về ID của bản ghi vừa tạo
     } catch (error) {
       throw error;
@@ -50,9 +38,7 @@ module.exports = {
   findUserByEmail: async (email) => {
     const query = 'SELECT * FROM users WHERE email = ?';
     try {
-      const connection = await pool.getConnection();
-      const [rows] = await connection.query(query, [email]);
-      connection.release();
+      const [rows] = await pool.execute(query, [email]);
       return rows[0] || null; // Trả về người dùng hoặc null nếu không tìm thấy
     } catch (error) {
       throw error;
@@ -61,9 +47,7 @@ module.exports = {
   getUserById: async (id) => {
     const query = 'SELECT id, name, email, role FROM users WHERE id = ?';
     try {
-      const connection = await pool.getConnection();
-      const [rows] = await connection.query(query, [id]);
-      connection.release();
+      const [rows] = await pool.execute(query, [id]);
       return rows[0] || null;
     } catch (error) {
       throw error;

@@ -2,7 +2,7 @@ require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const db = require('../config/database'); // file kết nối MySQL
 
-const auth = (req, res, next) => {
+const auth = async (req, res, next) => {
     const white_lists = ["/", "/register", "/login"];
 
     // Cho phép các route không cần xác thực
@@ -23,24 +23,25 @@ const auth = (req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         // Kiểm tra user có tồn tại trong MySQL không
-        db.query("SELECT id, email, name FROM users WHERE email = ?", [decoded.email], (err, results) => {
-            if (err) {
-                return res.status(500).json({ message: "Lỗi truy vấn database" });
-            }
-            if (results.length === 0) {
+        const conn = await db.getConnection();
+        try {
+            const [rows] = await conn.execute("SELECT id, email, name FROM users WHERE email = ?", [decoded.email]);
+            if (rows.length === 0) {
                 return res.status(401).json({ message: "Người dùng không tồn tại" });
             }
 
             // Gán user vào request để sử dụng sau
             req.user = {
-                id: results[0].id,
-                email: results[0].email,
-                name: results[0].name
+                id: rows[0].id,
+                email: rows[0].email,
+                name: rows[0].name
             };
 
             console.log(">>> check token decoded: ", decoded);
             next();
-        });
+        } finally {
+            conn.release();
+        }
 
     } catch (error) {
         return res.status(401).json({

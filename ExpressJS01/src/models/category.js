@@ -1,15 +1,13 @@
-const connection = require("../config/db"); 
+const pool = require("../config/database");
 
 async function getAllCategories() {
-  const conn = await connection();
-  const [rows] = await conn.execute("SELECT * FROM categories");
+  const [rows] = await pool.execute("SELECT * FROM categories");
   return rows;
 }
 
 
 async function createCategory(name, description) {
-  const conn = await connection();
-  const [result] = await conn.execute(
+  const [result] = await pool.execute(
     "INSERT INTO categories (name, description) VALUES (?, ?)",
     [name, description]
   );
@@ -18,15 +16,13 @@ async function createCategory(name, description) {
 
 
 async function getCategoryById(id) {
-  const conn = await connection();
-  const [rows] = await conn.execute("SELECT * FROM categories WHERE id = ?", [id]);
+  const [rows] = await pool.execute("SELECT * FROM categories WHERE id = ?", [id]);
   return rows[0];
 }
 
 
 async function updateCategory(id, name, description) {
-  const conn = await connection();
-  await conn.execute(
+  await pool.execute(
     "UPDATE categories SET name = ?, description = ? WHERE id = ?",
     [name, description, id]
   );
@@ -35,8 +31,7 @@ async function updateCategory(id, name, description) {
 
 
 async function deleteCategory(id) {
-  const conn = await connection();
-  await conn.execute("DELETE FROM categories WHERE id = ?", [id]);
+  await pool.execute("DELETE FROM categories WHERE id = ?", [id]);
   return true;
 }
 

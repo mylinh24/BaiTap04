@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const configViewEngine = require('./config/viewEngine');
 const apiRoutes = require('./routes/api');
-const connection = require('./config/database'); // file database.js đã đổi sang mysql
+const pool = require('./config/database'); // file database.js đã đổi sang mysql
 const { getHomepage } = require('./controllers/homeController.js');
 const cors = require('cors');
 
@@ -21,15 +21,6 @@ app.use('/', webAPI);
 
 app.use('/v1/api', apiRoutes);
 
-(async () => {
-    try {
-        const db = await connection();
-        console.log('✅ MySQL Database connected!');
-
-        app.listen(port, () => {
-            console.log(`🚀 Backend Nodejs App listening on port ${port}`);
-        });
-    } catch (error) {
-        console.log('❌ Error connect to DB: ', error);
-    }
-})();
+app.listen(port, () => {
+    console.log(`🚀 Backend Nodejs App listening on port ${port}`);
+});

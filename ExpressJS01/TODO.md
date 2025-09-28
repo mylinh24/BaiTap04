@@ -1,20 +1,31 @@
-# TODO: Implementation of Song Features (Favorites, Similar, Listened, Comments)
+# TODO: Fix Blank Page and Data Addition
 
-## Completed Steps:
-- [x] Create `favorites.js` model: Table creation, add/remove favorite, get user favorites, check if favorite.
-- [x] Create `listenedHistory.js` model: Table creation, add listen (increment count), get user history, get listen count.
-- [x] Create `comments.js` model: Table creation, add comment, get comments by song, delete comment.
-- [x] Create `song.js` model: Add listener_count column to songs table, get song by ID, update listener count.
-- [x] Update `song.controller.js`: Add methods for favorites, listened, similar songs (by category), comments.
-- [x] Update `song.routes.js`: Add routes for new features, apply auth middleware where needed.
+## Steps to Complete
 
-## Pending Steps:
-- [ ] Update Elasticsearch indexing: Include `listener_count` in `indexSong` function. Reindex songs after listener updates (e.g., in `addListen`).
-- [ ] Enhance similar songs: Use Elasticsearch for advanced similarity (e.g., artist fuzzy match) instead of just SQL category.
-- [ ] Test backend APIs: Use Postman or execute_command to verify endpoints (e.g., POST /songs/:id/favorite requires auth).
-- [x] Frontend integration: Update React components (home.jsx for similar/listen count/comments, user.jsx for favorites/history). Add API calls via util/api.js.
-- [ ] Error handling & validation: Add more checks (e.g., song exists before operations).
-- [ ] Reindex all songs: Run a command to sync listener_count to Elastic after schema changes.
+1. **[x] Fix syntax error in ReactJS01/reactjs01/src/pages/home.jsx**  
+   - Correct invalid console.log line in fetchSongs function.  
+   - Add error handling for API failures to show messages like "Backend not available" or "No data yet".  
+   - Ensure songs array is handled safely (e.g., data?.songs || []).
 
-## Next Steps:
-Proceed with Elasticsearch updates, then confirm backend completion before frontend.
+2. [] Test Frontend Rendering  
+   - Run `npm run dev` in ReactJS01/reactjs01.  
+   - Verify page loads without blank screen (should show loading or "No results" if no data).  
+   - Check browser console for errors.
+
+3. [] Verify Backend and DB  
+   - Ensure Express server running on port 8888 (`node src/server.js` in ExpressJS01).  
+   - Test API endpoints (e.g., GET /v1/api/search) in browser/Postman.  
+   - Confirm MySQL pool connection works (no errors in server logs).
+
+4. [] Seed Sample Data  
+   - Add sample categories via POST /v1/api/categories.  
+   - Add sample songs via POST /v1/api/songs (requires category_id).  
+   - Run reindex.js to sync to Elasticsearch.  
+   - Test adding a comment via API to confirm DB insertion.
+
+5. [] Test Full Flow  
+   - Refresh React app; verify songs load and display.  
+   - Test adding comment; check if saved to DB without errors.  
+   - If issues, debug API responses and console logs.
+
+Next Step: Edit home.jsx to fix syntax and enable rendering.

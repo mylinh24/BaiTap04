@@ -145,7 +145,7 @@ const HomePage = () => {
   useEffect(() => {
     if (auth.isAuthenticated) {
       getFavoritesApi().then(res => {
-        const favIds = new Set(res.map(f => f.id));
+        const favIds = new Set((res.data || []).map(f => f.id));
         setUserFavorites(favIds);
       }).catch(() => {});
     } else {
@@ -200,7 +200,7 @@ const HomePage = () => {
   const showComments = async (songId) => {
     try {
       const res = await getCommentsApi(songId);
-      setCommentsModal({ visible: true, songId, comments: res });
+      setCommentsModal({ visible: true, songId, comments: res.data || [] });
     } catch (error) {
       message.error("Lỗi tải bình luận");
     }
@@ -210,7 +210,7 @@ const HomePage = () => {
     try {
       await addCommentApi(commentsModal.songId, values.comment);
       const res = await getCommentsApi(commentsModal.songId);
-      setCommentsModal(prev => ({ ...prev, comments: res }));
+      setCommentsModal(prev => ({ ...prev, comments: res.data || [] }));
       commentForm.resetFields();
       message.success("Đã thêm bình luận");
     } catch (error) {
@@ -237,7 +237,7 @@ const HomePage = () => {
     } else {
       try {
         const res = await getSimilarSongsApi(songId);
-        setSimilarVisible(prev => ({ ...prev, [songId]: res }));
+        setSimilarVisible(prev => ({ ...prev, [songId]: res.data || [] }));
       } catch (error) {
         message.error("Lỗi tải bài hát tương tự");
       }
@@ -387,7 +387,7 @@ const HomePage = () => {
         footer={null}
       >
         <List
-          dataSource={commentsModal.comments || []}
+          dataSource={Array.isArray(commentsModal.comments) ? commentsModal.comments.filter(item => item && item.comment && item.comment.trim() !== '') : []}
           renderItem={item => (
             <List.Item
               actions={auth.isAuthenticated && auth.user.email === (item.user_email || item.user_name) ? [<Button type="link" onClick={() => handleDeleteComment(item.id)}>Xóa</Button>] : []}

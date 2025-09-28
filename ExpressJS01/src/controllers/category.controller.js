@@ -1,9 +1,8 @@
-const connection = require("../config/database");
+const pool = require("../config/database");
 
 exports.getAllCategories = async (req, res) => {
   try {
-    const conn = await connection();
-    const [rows] = await conn.execute("SELECT * FROM categories ORDER BY created_at DESC");
+    const [rows] = await pool.execute("SELECT * FROM categories ORDER BY created_at DESC");
     res.json(rows);
   } catch (error) {
     console.error(" Lỗi khi lấy danh mục:", error.message);
@@ -14,8 +13,7 @@ exports.getAllCategories = async (req, res) => {
 exports.getCategoryById = async (req, res) => {
   try {
     const { id } = req.params;
-    const conn = await connection();
-    const [rows] = await conn.execute("SELECT * FROM categories WHERE id = ?", [id]);
+    const [rows] = await pool.execute("SELECT * FROM categories WHERE id = ?", [id]);
 
     if (rows.length === 0) {
       return res.status(404).json({ message: "Không tìm thấy danh mục" });
@@ -35,8 +33,7 @@ exports.createCategory = async (req, res) => {
       return res.status(400).json({ message: "Tên danh mục là bắt buộc" });
     }
 
-    const conn = await connection();
-    const [result] = await conn.execute(
+    const [result] = await pool.execute(
       "INSERT INTO categories (name, description) VALUES (?, ?)",
       [name, description || null]
     );
@@ -53,8 +50,7 @@ exports.updateCategory = async (req, res) => {
     const { id } = req.params;
     const { name, description } = req.body;
 
-    const conn = await connection();
-    const [result] = await conn.execute(
+    const [result] = await pool.execute(
       "UPDATE categories SET name = ?, description = ? WHERE id = ?",
       [name, description || null, id]
     );
@@ -74,8 +70,7 @@ exports.deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const conn = await connection();
-    const [result] = await conn.execute("DELETE FROM categories WHERE id = ?", [id]);
+    const [result] = await pool.execute("DELETE FROM categories WHERE id = ?", [id]);
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: "Không tìm thấy danh mục" });
